@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📝 Class Quiz with Firebase</title>
+    
+    <!-- Firebase SDK - USING CORRECT VERSION -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #0b2b3b 0%, #1a4a5f 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 1rem;
+        }
+
+        .quiz-container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .quiz-header {
+            background: #1e3c4a;
+            padding: 1rem 1.5rem;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .timer-box {
+            background: rgba(0,0,0,0.3);
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-family: monospace;
+            font-size: 1.3rem;
+        }
+
+        .timer-box span {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffb347;
+        }
+
+        .student-name {
+            background: #ffb347;
+            color: #1e3c4a;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-weight: bold;
+        }
+
+        .warning {
+            background: #ff4444;
+            color: white;
+            text-align: center;
+            padding: 0.5rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        .quiz-body {
+            padding: 2rem;
+        }
+
+        .question-text {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: #1e3c4a;
+            border-left: 5px solid #ffb347;
+            padding-left: 1rem;
+        }
+
+        .option {
+            background: #f5f5f5;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.8rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .option:hover {
+            background: #e8f0f3;
+        }
+
+        .option.selected {
+            background: #fff3e0;
+            border-color: #ffb347;
+        }
+
+        .option input {
+            margin-right: 1rem;
+            transform: scale(1.2);
+        }
+
+        .option label {
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        button {
+            background: #2c5f6e;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 2rem;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        button:hover {
+            background: #1e4a5a;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .submit-btn {
+            background: #e67e22;
+            width: 100%;
+            padding: 0.9rem;
+            font-size: 1.1rem;
+            margin-top: 0.5rem;
+        }
+
+        .submit-btn:hover {
+            background: #d35400;
+        }
+
+        .score-card {
+            background: #f9f9f9;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            margin-top: 1rem;
+        }
+
+        .score-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #e67e22;
+        }
+
+        .answers-review {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+
+        .answer-item {
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            border-radius: 0.5rem;
+        }
+
+        .answer-correct {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .answer-wrong {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+
+        footer {
+            background: #f0f0f0;
+            text-align: center;
+            padding: 0.8rem;
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .quiz-body {
+                padding: 1.2rem;
+            }
+            .question-text {
+                font-size: 1.2rem;
+            }
+            .option label {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div class="quiz-header">
+        <div class="timer-box">⏱️ <span id="timerDisplay">00:20</span></div>
+        <div class="student-name" id="studentNameDisplay">👤 Student</div>
+    </div>
+    <div class="warning" id="warningBox">⚠️ Warning: Tab switching detected!</div>
+    <div id="quizContent"></div>
+    <footer>🔒 No tab switching | Results saved to cloud</footer>
+</div>
+
+<script>
+    // ==================== REPLACE WITH YOUR FIREBASE CONFIG ====================
+    // Go to Firebase Console → Project Settings → Your apps → Copy config
+    const firebaseConfig = {
+  apiKey: "AIzaSyBEXX96i_fmXlw9CReOnWjLn7GvHCjQ0o4",
+  authDomain: "classquiz-1af8c.firebaseapp.com",
+  projectId: "classquiz-1af8c",
+  storageBucket: "classquiz-1af8c.firebasestorage.app",
+  messagingSenderId: "804118031083",
+  appId: "1:804118031083:web:402314733e8ca51d6aecae",
+  measurementId: "G-6MN8VXN7RC"
+};
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    
+    // Quiz Data
+    const questions = [
+        {
+            text: "The Chennai Express of 200 m runs at a speed of 62 km/hr and a person runs on the platform at a speed of 20km/hr in direction opposite to that of train.Find the time taken by the train to cross the running person?",
+            options: ["8.77 sec", "9.77 sec", "12.77 sec", "13.00 sec"],
+            correct: 0
+        },
+        {
+            text: "Two trains A and B of 150 m and 300 m,run at speed of 65 km/hr and 80 km/hr respectively,in the direction opposite direction to each other.Find the time required to cross each other after the moment they met?",
+            options: ["10 sec", "11.17 sec", "12.30 sec", "13.11 sec"],
+            correct: 1
+        },
+        {
+            text: "5 years ago,sister's age was 5 times the age of her brother and the sum of the present ages of sister and brother is 34 years. What will be the age of her brother after 6 years?",
+            options: ["12 years", "13.5 years", "15 years", "20 years"],
+            correct: 2
+        },
+        {
+            text: "The ratio of Rohan's age 4 years ago and Rahul's age after 4 years is 1:1. If at present, the ratio of their ages is 5:3,then find the ratio between Rohan's age 4 years hence and Rahul's age 4 years ago.",
+            options: ["1:3", "3:1", "4:3", "3:4"],
+            correct: 1
+        },
+        {
+            text: "Sugar A worth RS. 130/kg and B of RS. 120/kg are mixed with a third variety C in the ratio 1:1:2.If the mixture is worth RS. 160,then find the price of third variety of sugar",
+            options: ["RS. 195", "RS. 200", "RS. 350", "RS. 250"],
+            correct: 1
+        }
+    ];
+    
+    // Variables
+    let currentIndex = 0;
+    let userAnswers = new Array(5).fill(null);
+    let quizActive = true;
+    let timeLeft = 300;
+    let timerInterval = null;
+    let studentName = "";
+    let warningCount = 0;
+    
+    // DOM Elements
+    const contentDiv = document.getElementById("quizContent");
+    const timerDisplay = document.getElementById("timerDisplay");
+    const nameDisplay = document.getElementById("studentNameDisplay");
+    const warningBox = document.getElementById("warningBox");
+    
+    // Helper Functions
+    function formatTime(seconds) {
+        return `${Math.floor(seconds/60).toString().padStart(2,'0')}:${(seconds%60).toString().padStart(2,'0')}`;
+    }
+    
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
+    
+    function startTimer() {
+        stopTimer();
+        timeLeft = 300;
+        timerDisplay.innerText = formatTime(timeLeft);
+        
+        timerInterval = setInterval(() => {
+            if (!quizActive) return;
+            
+            if (timeLeft <= 1) {
+                stopTimer();
+                if (currentIndex === 4) {
+                    finishQuiz();
+                } else {
+                    nextQuestion();
+                }
+            } else {
+                timeLeft--;
+                timerDisplay.innerText = formatTime(timeLeft);
+                if (timeLeft <= 5) {
+                    timerDisplay.style.color = "#ffaa66";
+                } else {
+                    timerDisplay.style.color = "#ffb347";
+                }
+            }
+        }, 1000);
+    }
+    
+    function selectAnswer(questionIndex, optionIndex) {
+        if (!quizActive) return;
+        userAnswers[questionIndex] = optionIndex;
+        renderCurrentQuestion();
+    }
+    
+    function nextQuestion() {
+        if (currentIndex < 4) {
+            stopTimer();
+            currentIndex++;
+            renderCurrentQuestion();
+            startTimer();
+        }
+    }
+    
+    function prevQuestion() {
+        if (currentIndex > 0) {
+            stopTimer();
+            currentIndex--;
+            renderCurrentQuestion();
+            startTimer();
+        }
+    }
+    
+    function renderCurrentQuestion() {
+        const q = questions[currentIndex];
+        const selectedAnswer = userAnswers[currentIndex];
+        
+        let optionsHtml = '';
+        q.options.forEach((opt, idx) => {
+            const isSelected = selectedAnswer === idx;
+            optionsHtml += `
+                <div class="option ${isSelected ? 'selected' : ''}" onclick="selectAnswer(${currentIndex}, ${idx})">
+                    <input type="radio" name="question" ${isSelected ? 'checked' : ''} readonly>
+                    <label>${opt}</label>
+                </div>
+            `;
+        });
+        
+        const isLastQuestion = currentIndex === 4;
+        const buttonAction = isLastQuestion ? 'finishQuiz()' : 'nextQuestion()';
+        const buttonText = isLastQuestion ? '✅ SUBMIT QUIZ ✅' : '➡ NEXT QUESTION';
+        
+        contentDiv.innerHTML = `
+            <div class="quiz-body">
+                <div class="question-text">${q.text}</div>
+                ${optionsHtml}
+                <div class="nav-buttons">
+                    <button onclick="prevQuestion()" ${currentIndex === 0 ? 'disabled' : ''}>◀ PREVIOUS</button>
+                    <button onclick="nextQuestion()" ${isLastQuestion ? 'disabled' : ''}>NEXT ▶</button>
+                </div>
+                <button class="submit-btn" onclick="${buttonAction}">${buttonText}</button>
+            </div>
+        `;
+        
+        document.getElementById("progressText")?.remove();
+    }
+    
+    async function finishQuiz() {
+        if (!quizActive) return;
+        quizActive = false;
+        stopTimer();
+        
+        // Calculate score
+        let score = 0;
+        let details = [];
+        
+        for (let i = 0; i < questions.length; i++) {
+            const isCorrect = userAnswers[i] === questions[i].correct;
+            if (isCorrect) score++;
+            
+            details.push({
+                question: questions[i].text,
+                userAnswer: userAnswers[i] !== null ? questions[i].options[userAnswers[i]] : "No Answer",
+                correctAnswer: questions[i].options[questions[i].correct],
+                isCorrect: isCorrect
+            });
+        }
+        
+        const percentage = Math.round((score / 5) * 100);
+        
+        // Show saving message
+        contentDiv.innerHTML = `
+            <div class="quiz-body" style="text-align: center;">
+                <h2>📤 Saving your results...</h2>
+                <p>Please wait</p>
+            </div>
+        `;
+        
+        // Save to Firebase
+        let saved = false;
+        try {
+            await db.collection("quiz_results").add({
+                name: studentName,
+                score: score,
+                total: 5,
+                percentage: percentage,
+                answers: details,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                date: new Date().toISOString()
+            });
+            saved = true;
+            console.log("✅ Results saved to Firebase!");
+        } catch (error) {
+            console.error("❌ Firebase save error:", error);
+            saved = false;
+        }
+        
+        // Display results
+        let resultsHtml = `
+            <div class="quiz-body">
+                <div class="score-card">
+                    <h2>${saved ? '✅' : '⚠️'} ${studentName}'s Results</h2>
+                    <div class="score-number">${score} / 5 (${percentage}%)</div>
+                    ${saved ? '<p style="color: green;">✓ Results saved to cloud!</p>' : '<p style="color: red;">✗ Could not save results. Please inform teacher.</p>'}
+                    <hr>
+                    <h3>📋 Detailed Answers:</h3>
+                    <div class="answers-review">
+        `;
+        
+        details.forEach((item, idx) => {
+            resultsHtml += `
+                <div class="answer-item ${item.isCorrect ? 'answer-correct' : 'answer-wrong'}">
+                    <strong>${idx + 1}. ${item.question}</strong><br>
+                    ${item.isCorrect ? '✅' : '❌'} Your answer: ${item.userAnswer}<br>
+                    📖 Correct answer: ${item.correctAnswer}
+                </div>
+            `;
+        });
+        
+        resultsHtml += `
+                    </div>
+                    <button onclick="location.reload()" style="background: #28a745; width: 100%; margin-top: 1rem;">🔄 TAKE QUIZ AGAIN</button>
+                </div>
+            </div>
+        `;
+        
+        contentDiv.innerHTML = resultsHtml;
+        timerDisplay.innerText = "00:00";
+        warningBox.style.display = "none";
+    }
+    
+    // Tab switching detection
+    document.addEventListener('visibilitychange', function() {
+        if (!quizActive) return;
+        
+        if (document.hidden) {
+            warningCount++;
+            warningBox.style.display = "block";
+            
+            if (warningCount >= 2) {
+                warningBox.innerHTML = "⚠️ Auto-submitting due to tab switch! ⚠️";
+                finishQuiz();
+            } else {
+                warningBox.innerHTML = "⚠️ WARNING: Tab switching detected! Next time quiz will auto-submit! ⚠️";
+                setTimeout(() => {
+                    if (warningBox) warningBox.style.display = "none";
+                }, 3000);
+            }
+        }
+    });
+    
+    // Disable right click
+    document.addEventListener('contextmenu', (e) => {
+        if (quizActive) e.preventDefault();
+    });
+    
+    // Start quiz with name
+    function startQuiz() {
+        studentName = prompt("📝 Enter your full name to start the quiz:", "");
+        if (!studentName || studentName.trim() === "") {
+            alert("Name is required!");
+            return startQuiz();
+        }
+        studentName = studentName.trim();
+        nameDisplay.innerText = `👤 ${studentName}`;
+        quizActive = true;
+        renderCurrentQuestion();
+        startTimer();
+    }
+    
+    // Initialize
+    startQuiz();
+</script>
+</body>
+</html>
