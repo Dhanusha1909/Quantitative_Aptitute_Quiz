@@ -221,7 +221,7 @@
 
 <div class="quiz-container">
     <div class="quiz-header">
-        <div class="timer-box">⏱️ <span id="timerDisplay">00:20</span></div>
+        <div class="timer-box">⏱️ <span id="timerDisplay">30:00</span></div>
         <div class="student-name" id="studentNameDisplay">👤 Student</div>
     </div>
     <div class="warning" id="warningBox">⚠️ Warning: Tab switching detected!</div>
@@ -249,14 +249,14 @@
     // Quiz Data
     const questions = [
         {
-            text: "The Chennai Express of 200 m runs at a speed of 62 km/hr and a person runs on the platform at a speed of 20 km/hr in the direction opposite to that of train. Find the time taken by the train to cross the running person?",
-            options: ["8.77 sec", "9.77 sec", "12.77 sec", "13.00 sec"],
-            correct: 0
+            text: "A can do a work in 15 days and B in 20 days. If they work on it together for 4 days, then the fraction of the work that is left is:",
+            options: ["1/4", "7/15", "7/60", "8/15"],
+            correct: 3
         },
         {
-            text: "Chandigarh express of 100 m runs at a speed of 60 km/hr. What will be the time taken to cross a platform of 150 meters long?",
-            options: ["11 sec", "12.5 sec", "15 sec", "15.23 sec"],
-            correct: 2
+            text: "If x+y=10 and 3x-2y=4, find the value of x:",
+            options: ["24/5", "8/5", "21/5", "28/5"],
+            correct: 0
         },
         {
             text: "5 years ago, sister’s age was 5 times the age of her brother and the sum of present ages of sister and brother is 34 years. What will be the age of her brother after 6 years?",
@@ -272,16 +272,67 @@
             text: "Sugar A worth Rs. 130/kg and B of Rs. 120/kg are mixed with a third variety C in the ratio of 1 : 1 : 2. If the mixture is worth Rs. 160, then find the price of third variety of sugar.",
             options: ["RS. 195", "RS. 200", "RS. 350", "RS. 250"],
             correct: 0
+        },
+        {
+            text:"A, B and C can do a piece of work in 20, 30 and 60 days respectively. In how many days can A do the work if he is assisted by B and C on every third day?",
+            options:["15 days","12 days","10 days","16 days"],
+            correct: 0
+        },
+        {
+            text:"The difference between simple and compound interests compounded annually on a certain sum of money for 2 years at 4% per annum is Re. 1. The sum (in Rs.) is:",
+            options:["625","630","650","675"],
+            correct: 0
+        },
+        {
+            text:"The difference between simple interest and compound on Rs. 1200 for one year at 10% per annum reckoned half-yearly is:",
+            options:["Rs.5","Rs.2.5","Rs.3","None of these"],
+            correct: 2
+        },
+        {
+            text:"A boat can travel with a speed of 13 km/hr in still water. If the speed of the stream is 4 km/hr, find the time taken by the boat to go 68 km downstream.",
+            options:["2 hours","3 hours","4 hours","5 hours"],
+            correct: 2
+        },
+        {
+            text:"A pump can fill a tank with  water in 2 hours. Because of a leak, it took 7/3 hours to fill the tank. The leak can drain all the water of the tank in:",
+            options:["10 hours","8 hours","12 hours","14 hours"],
+            correct: 3
+        },
+        {
+            text:"A person crosses a 600 m long street in 5 minutes. What is his speed in km per hour?",
+            options:["2.6","5.5","7.2","8"],
+            correct: 2
+        },
+        {
+            text:"If a person walks at 14 km/hr instead of 10 km/hr, he would have walked 20 km more. The actual distance travelled by him is:",
+            options:["50 KM","55 KM","70 KM","56 KM"],
+            correct: 0
+        },
+        {
+            text:"If selling price is doubled, the profit triples. Find the profit percent.",
+            options:["66","100","120","70"],
+            correct: 1
+        },
+        {
+            text:"Two students appeared at an examination. One of them secured 9 marks more than the other and his marks was 56% of the sum of their marks. The marks obtained by them are:",
+            options:["30,39","41,32","42,33","None of these"],
+            correct: 2
+        },
+        {
+            text:"A fruit seller had some apples. He sells 40% apples and still has 420 apples. Originally, he had:",
+            options:["600 apples","890 apples","880 apples","700 apples"],
+            correct :3
         }
     ];
     
     // Variables
     let currentIndex = 0;
-    let userAnswers = new Array(5).fill(null);
+    let userAnswers = new Array(questions.length).fill(null);
     let quizActive = true;
-    let timeLeft = 1200;
+    let timeLeft = 1800;
     let timerInterval = null;
     let studentName = "";
+    let registerNumber = "";
     let warningCount = 0;
     
     // DOM Elements
@@ -358,7 +409,7 @@
             `;
         });
         
-        const isLastQuestion = currentIndex === 4;
+        const isLastQuestion = currentIndex === questions.length-1;
         const buttonAction = isLastQuestion ? 'finishQuiz()' : 'nextQuestion()';
         const buttonText = isLastQuestion ? '✅ SUBMIT QUIZ ✅' : '➡ NEXT QUESTION';
         
@@ -398,7 +449,7 @@
             });
         }
         
-        const percentage = Math.round((score / 5) * 100);
+        const percentage = Math.round((score / questions.length) * 100);
         
         // Show saving message
         contentDiv.innerHTML = `
@@ -418,7 +469,7 @@
     registerNumber: registerNumber,
     name: studentName,
     score: score,
-    total: 5,
+    total: questions.length,
     percentage: percentage,
     answers: details,
     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -437,7 +488,7 @@
             <div class="quiz-body">
                 <div class="score-card">
                     <h2>${saved ? '✅' : '⚠️'} ${studentName}'s Results</h2>
-                    <div class="score-number">${score} / 5 (${percentage}%)</div>
+                    <div class="score-number">${score} / ${questions.length} (${percentage}%)</div>
                     ${saved ? '<p style="color: green;">✓ Results saved to cloud!</p>' : '<p style="color: red;">✗ Could not save results. Please inform teacher.</p>'}
                     <hr>
                     <h3>📋 Detailed Answers:</h3>
@@ -501,7 +552,7 @@
         return startQuiz();
     }
 
-    let registerNumber = prompt("Enter your Register Number:");
+    registerNumber = prompt("Enter your Register Number:");
 
     if (!registerNumber || registerNumber.trim() === "") {
         alert("Register Number is required");
@@ -521,7 +572,7 @@
         return;
     }
 
-    window.registerNumber = registerNumber;
+
 
     studentName = studentName.trim();
 
