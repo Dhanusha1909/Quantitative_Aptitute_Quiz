@@ -279,7 +279,7 @@
     let currentIndex = 0;
     let userAnswers = new Array(5).fill(null);
     let quizActive = true;
-    let timeLeft = 300;
+    let timeLeft = 1200;
     let timerInterval = null;
     let studentName = "";
     let warningCount = 0;
@@ -304,28 +304,22 @@
     
     function startTimer() {
         stopTimer();
-        timeLeft = 300;
         timerDisplay.innerText = formatTime(timeLeft);
         
         timerInterval = setInterval(() => {
             if (!quizActive) return;
             
-            if (timeLeft <= 1) {
-                stopTimer();
-                if (currentIndex === 4) {
-                    finishQuiz();
-                } else {
-                    nextQuestion();
-                }
-            } else {
-                timeLeft--;
-                timerDisplay.innerText = formatTime(timeLeft);
-                if (timeLeft <= 5) {
-                    timerDisplay.style.color = "#ffaa66";
-                } else {
-                    timerDisplay.style.color = "#ffb347";
-                }
-            }
+            
+            timeLeft--;
+            timerDisplay.innerText = formatTime(timeLeft);
+            if (timeLeft <= 300) {
+                timerDisplay.style.color = "red";
+            } 
+            if (timeLeft <= 0) {
+            stopTimer();
+            finishQuiz(); // Auto submit after 20 minutes
+        }
+            
         }, 1000);
     }
     
@@ -336,22 +330,18 @@
     }
     
     function nextQuestion() {
-        if (currentIndex < 4) {
-            stopTimer();
-            currentIndex++;
-            renderCurrentQuestion();
-            startTimer();
-        }
+    if (currentIndex < questions.length - 1) {
+        currentIndex++;
+        renderCurrentQuestion();
     }
+}
     
     function prevQuestion() {
-        if (currentIndex > 0) {
-            stopTimer();
-            currentIndex--;
-            renderCurrentQuestion();
-            startTimer();
-        }
+    if (currentIndex > 0) {
+        currentIndex--;
+        renderCurrentQuestion();
     }
+}
     
     function renderCurrentQuestion() {
         const q = questions[currentIndex];
@@ -421,15 +411,20 @@
         // Save to Firebase
         let saved = false;
         try {
-            await db.collection("quiz_results").add({
-                name: studentName,
-                score: score,
-                total: 5,
-                percentage: percentage,
-                answers: details,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                date: new Date().toISOString()
-            });
+            await db.collection("quiz_results")
+.doc(registerNumber)
+.set({
+
+    registerNumber: registerNumber,
+    name: studentName,
+    score: score,
+    total: 5,
+    percentage: percentage,
+    answers: details,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    date: new Date().toISOString()
+
+});
             saved = true;
             console.log("✅ Results saved to Firebase!");
         } catch (error) {
@@ -497,18 +492,48 @@
     });
     
     // Start quiz with name
-    function startQuiz() {
-        studentName = prompt("📝 Enter your full name to start the quiz:", "");
-        if (!studentName || studentName.trim() === "") {
-            alert("Name is required!");
-            return startQuiz();
-        }
-        studentName = studentName.trim();
-        nameDisplay.innerText = `👤 ${studentName}`;
-        quizActive = true;
-        renderCurrentQuestion();
-        startTimer();
+    async function startQuiz() {
+
+    studentName = prompt("Enter your Full Name:");
+
+    if (!studentName || studentName.trim() === "") {
+        alert("Name is required");
+        return startQuiz();
     }
+
+    let registerNumber = prompt("Enter your Register Number:");
+
+    if (!registerNumber || registerNumber.trim() === "") {
+        alert("Register Number is required");
+        return startQuiz();
+    }
+
+    registerNumber = registerNumber.trim();
+
+    // Check whether already attended
+    const doc = await db.collection("quiz_results")
+                        .doc(registerNumber)
+                        .get();
+
+    if(doc.exists){
+        alert("❌ You have already attended this quiz.");
+        location.reload();
+        return;
+    }
+
+    window.registerNumber = registerNumber;
+
+    studentName = studentName.trim();
+
+    nameDisplay.innerText =
+        `👤 ${studentName} (${registerNumber})`;
+
+    quizActive = true;
+
+    renderCurrentQuestion();
+
+    startTimer();
+}
     
     // Initialize
     startQuiz();
